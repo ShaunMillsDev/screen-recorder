@@ -16,6 +16,7 @@ class TranslucentWindow(tk.Toplevel):
         self.rect = None
         self.countdown_text = None
         self.canvas = None
+        self.recording = False
 
     def start_recording(self):
         self.master.withdraw() # hide root window
@@ -24,7 +25,6 @@ class TranslucentWindow(tk.Toplevel):
         self.attributes('-alpha', 0.5)
         self.attributes('-topmost', True)    
         self.wm_attributes('-transparentcolor', 'gray')
-        self.overrideredirect(1)
 
         # reset canvas
         if self.canvas:
@@ -45,10 +45,13 @@ class TranslucentWindow(tk.Toplevel):
         self.start_y = None
         self.rect = None
 
-
     def stop_recording(self):
+        self.recording = False
         self.withdraw()
         self.master.deiconify()
+        self.master.wm_attributes("-topmost", True)
+        self.master.wm_attributes("-topmost", False)
+
 
     def view_recording(self):
         folder_name = "recordings"
@@ -56,35 +59,26 @@ class TranslucentWindow(tk.Toplevel):
         os.startfile(path)
 
     def on_left_click(self, event):
-        self.start_x = self.winfo_rootx() + event.x
-        self.start_y = self.winfo_rooty() + event.y
-        self.rect = self.canvas.create_rectangle(self.start_x, self.start_y, self.start_x, self.start_y, outline='white', width=2)
+        if not self.recording:
+            self.start_x = self.winfo_rootx() + event.x
+            self.start_y = self.winfo_rooty() + event.y
+            self.rect = self.canvas.create_rectangle(self.start_x, self.start_y, self.start_x, self.start_y, outline='white', width=2)
 
     def on_mouse_drag(self, event):
-        if self.rect:
+        if not self.recording and self.rect:
             self.canvas.delete(self.rect)
             self.rect = self.canvas.create_rectangle(self.start_x, self.start_y, event.x, event.y, outline='white', width=2, fill='gray')
     
     def on_left_release(self, event):
+        # set recording boolean to disable more rectangles
+        self.record = True
+
         # set current mouse x,y position to end position variables
         end_x = event.x
         end_y = event.y
 
         # create variables for window dimensions
         x, y, width, height = min(self.start_x, end_x), min(self.start_y, end_y), abs(self.start_x - end_x), abs(self.start_y - end_y)        
-        
-        # Create a new window with dimensions just created where everything gray is transparent
-        # self.red_rect_window = tk.Toplevel(self.master)
-        # self.red_rect_window.geometry(f"{width}x{height}+{x}+{y}")
-        # self.red_rect_window.overrideredirect(1)
-        # self.red_rect_window.attributes("-topmost", True)
-        # self.red_rect_window.attributes("-alpha", 0.5)
-        # self.red_rect_window.wm_attributes("-transparentcolor", 'gray') # anything inside this window that is gray is transparent
-
-        # Create a gray canvas with a red rectangle on so only the rectangle is visible        
-        # red_rect_canvas = tk.Canvas(self.red_rect_window, bg='gray', bd=0, highlightthickness=0) 
-        # red_rect_canvas.pack(fill=tk.BOTH, expand=True)
-        # red_rect_canvas.create_rectangle(0, 0, width, height, outline='red', width=2, fill='gray', tags='keep')
 
         # change to transparent background and red outline for rectangle
         self.canvas.configure(background='gray')
@@ -101,15 +95,14 @@ class TranslucentWindow(tk.Toplevel):
             time.sleep(1)
             self.canvas.delete('countdown')
 
-        self.overrideredirect(0)
+        self.update()
 
-        # self.withdraw()
         self.record_screen(x, y, width, height)
 
     def record_screen(self, x, y, width, height):
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         current_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        filename = f'recordings/recording_{current_time}.mp4'
+        filename = f'recordings/recording.mp4' #_{current_time}.mp4'
         out = cv2.VideoWriter(filename, fourcc, 60.0, (width, height))
         sct = mss()
 
