@@ -5,16 +5,20 @@ import datetime
 import cv2
 import tkinter as tk
 import numpy as np
-from mss import mss
-from mouse import get_position as get_mouse_position
 import threading
 import win32gui
 import win32ui
 import win32con
+from mouse import get_position as get_mouse_position
+
 
 class TranslucentWindow(tk.Toplevel):
     def __init__(self, master=None):
         super().__init__(master)
+        # Create recordings folder if it does not exist
+        folder_name = os.path.join(os.getcwd(), "recordings")
+        if not os.path.exists(folder_name):
+            os.mkdir(folder_name)
         self.start_x = None
         self.start_y = None
         self.current_x = None
@@ -227,7 +231,7 @@ class TranslucentWindow(tk.Toplevel):
                 out.release()
                 self.stop_recording()
                 break
-        
+
 
 def main():
     root = tk.Tk()
