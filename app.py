@@ -26,8 +26,9 @@ class TranslucentWindow(tk.Toplevel):
         self.f8_pressed = False
         self.thread_running = False
         self.mouse_released = False
+        self.valid_area = False
 
-    def start_recording_button(self):
+    def select_area_button(self):
         self.master.withdraw() # hide root window
         self.deiconify() # bring TranslucentWindow to front
         self.attributes('-fullscreen', True)
@@ -54,11 +55,10 @@ class TranslucentWindow(tk.Toplevel):
         self.start_y = None
         self.rect = None
     
-        
     def check_f8_pressed(self):
         while not self.recording and not self.f8_pressed and self.mouse_released:
 
-            if keyboard.is_pressed('F8'):
+            if keyboard.is_pressed('F8') and self.valid_area:
                 self.f8_pressed = True
 
                 # set current mouse x,y position to end position variables
@@ -115,12 +115,23 @@ class TranslucentWindow(tk.Toplevel):
         self.mouse_released = True
 
         if not self.recording and self.rect:
-            # change for rectangle
-            self.canvas.itemconfig(self.rect, outline='blue')
-
             # set final mouse position coords
             self.current_x = event.x
             self.current_y = event.y
+
+            # set current mouse x,y position to end position variables
+            end_x = self.current_x
+            end_y = self.current_y
+
+            # create variables for window dimensions
+            width, height = abs(self.start_x - end_x), abs(self.start_y - end_y)
+            
+            if width < 40 or height < 40:
+                self.canvas.delete(self.rect)
+                self.valid_area = False
+            else:
+                self.valid_area = True
+                self.canvas.itemconfig(self.rect, outline='blue')
 
             # if thread is not running and not recording, run thread to check f8 key presses
             if not self.thread_running:
@@ -164,7 +175,6 @@ class TranslucentWindow(tk.Toplevel):
         current_time = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         filename = f'recordings/recording_{current_time}.mp4'
         out = cv2.VideoWriter(filename, fourcc, 60.0, (width, height))
-        sct = mss()
 
         def get_cursor_mask(cursor_size=5):
             cursor_mask = np.zeros((cursor_size, cursor_size, 3), dtype=np.uint8)
@@ -249,13 +259,13 @@ def main():
                                  justify=tk.CENTER)  # Center the text
     instruction_label.place(x=15, y=10)    
     
-    # start button to begin selecting area
-    start_button = tk.Button(root, 
+    # select area button to begin selecting area
+    select_area = tk.Button(root, 
                              text="Select Area",
                              width=30,
                              height=3,
-                             command=app.start_recording_button)
-    start_button.place(x=15, y=50)
+                             command=app.select_area_button)
+    select_area.place(x=15, y=50)
     
     # view recording button allows user to view where recordings are stored
     view_button = tk.Button(root, 
